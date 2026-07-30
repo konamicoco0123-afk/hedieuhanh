@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\MSI PC\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
+  "python.analysis.extraPaths": [],
+  "python-envs.defaultEnvManager": "ms-python.python:system"
+}
