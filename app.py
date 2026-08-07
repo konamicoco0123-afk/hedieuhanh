@@ -128,6 +128,35 @@ with st.sidebar:
         step=1,
     )
 
+    st.session_state["step_by_step"] = st.checkbox(
+        "Bật Step-by-Step",
+        value=st.session_state.get("step_by_step", False),
+        help="Bật chế độ mô phỏng từng bước với điều khiển Play/Pause/Next/Reset",
+    )
+    if st.session_state["step_by_step"]:
+        speed_val = st.select_slider(
+            "Tốc độ mô phỏng",
+            options=[0.5, 1.0, 2.0, 4.0],
+            value=st.session_state.get("sim_speed_factor", 1.0),
+        )
+        st.session_state["sim_speed_factor"] = speed_val
+        if "sim_state" in st.session_state and st.session_state.get("sim_state") is not None:
+            st.session_state["sim_state"]["speed_factor"] = speed_val
+        if st.button("Khởi tạo mô phỏng từng bước", key="sidebar_start_step"):
+            if not st.session_state["patients"]:
+                st.warning("Vui lòng nạp dữ liệu bệnh nhân trước khi bắt đầu mô phỏng từng bước.")
+            else:
+                init_simulation_state(
+                    [clone_patient(p) for p in st.session_state["patients"]],
+                    algorithm,
+                    time_quantum=time_quantum,
+                    enable_aging=st.session_state.get("apply_aging", False),
+                    aging_interval=st.session_state.get("aging_interval", 3),
+                    aging_step=st.session_state.get("aging_step", 1),
+                )
+                st.session_state["sim_state"]["speed_factor"] = st.session_state.get("sim_speed_factor", 1.0)
+                st.experimental_rerun()
+
     if st.button("Bốc số ngẫu nhiên"):
         st.session_state["patients"] = generate_random_patients(st.session_state["patient_count"])
         st.session_state["result"] = None
@@ -141,7 +170,10 @@ with st.sidebar:
         st.session_state["apply_aging"] = False
         st.session_state["aging_interval"] = 3
         st.session_state["aging_step"] = 1
-        st.rerun()
+        st.session_state["step_by_step"] = False
+        st.session_state.pop("sim_state", None)
+        st.session_state.pop("sim_initialized", None)
+        st.experimental_rerun()
 
 if st.button("Khởi tạo nhập tay"):
 
@@ -161,41 +193,6 @@ if st.button("Khởi tạo nhập tay"):
 
     st.session_state["result"] = None
     st.session_state["comparison_result"] = None
-
-    st.session_state["result"] = None
-    st.session_state["comparison_result"] = None
-        
-    st.session_state["result"] = None
-    st.session_state["comparison_result"] = None
-
-    st.session_state["step_by_step"] = st.checkbox(
-        "Bật Step-by-Step",
-        value=st.session_state.get("step_by_step", False),
-        help="Bật chế độ mô phỏng từng bước (hiển thị các điều khiển Play/Pause/Next/Reset)",
-    )
-    if st.session_state["step_by_step"]:
-        speed_val = st.select_slider(
-            "Tốc độ mô phỏng",
-            options=[0.5, 1.0, 2.0, 4.0],
-            value=st.session_state.get("sim_speed_factor", 1.0),
-        )
-        st.session_state["sim_speed_factor"] = speed_val
-        if "sim_state" in st.session_state and st.session_state.get("sim_state") is not None:
-            st.session_state["sim_state"]["speed_factor"] = speed_val
-        if st.button("Bắt đầu Mô phỏng Từng Bước (Sidebar)"):
-            if not st.session_state["patients"]:
-                st.warning("Vui lòng nạp dữ liệu bệnh nhân trước khi bắt đầu mô phỏng từng bước.")
-            else:
-                init_simulation_state(
-                    [clone_patient(p) for p in st.session_state["patients"]],
-                    algorithm,
-                    time_quantum=time_quantum,
-                    enable_aging=st.session_state.get("apply_aging", False),
-                    aging_interval=st.session_state.get("aging_interval", 3),
-                    aging_step=st.session_state.get("aging_step", 1),
-                )
-                st.session_state["sim_state"]["speed_factor"] = st.session_state.get("sim_speed_factor", 1.0)
-                st.rerun()
 
 st.subheader("Danh sách bệnh nhân")
 

@@ -4,7 +4,7 @@ from algorithms import Patient, get_effective_priority, recalc_effective_priorit
 
 
 def make_sim_state(patients: List[Patient], algorithm: str, time_quantum: int = 2, enable_aging: bool = False, aging_interval: int = 3, aging_step: int = 1) -> Dict:
-    sim_patients = [Patient(id=p.id, arrival_time=p.arrival_time, burst_time=p.burst_time, priority=p.priority) for p in patients]
+    sim_patients = [Patient(id=p.id, arrival_time=p.arrival_time, burst_time=p.burst_time, priority=p.priority, disease=p.disease) for p in patients]
     future = deque(sorted(sim_patients, key=lambda p: p.arrival_time))
     return {
         "current_time": 0,

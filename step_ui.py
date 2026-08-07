@@ -1,8 +1,8 @@
-import time
 from typing import List
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from algorithms import Patient, clone_patient, patient_to_row
 from simulation import make_sim_state, step_sim_state
@@ -48,7 +48,7 @@ def render_step_by_step_ui(
     st.markdown("---")
     st.subheader("Mô phỏng Từng Bước")
 
-    if st.button("Bắt đầu Mô phỏng Từng Bước"):
+    if st.button("Khởi tạo mô phỏng từng bước", key="step_init"):
         if not patients:
             st.warning("Vui lòng nạp dữ liệu bệnh nhân trước khi bắt đầu mô phỏng từng bước.")
         else:
@@ -60,40 +60,45 @@ def render_step_by_step_ui(
                 aging_interval=aging_interval,
                 aging_step=aging_step,
             )
+            st.experimental_rerun()
 
     sim = st.session_state.get("sim_state")
     if not sim:
         return
 
-    cols = st.columns([1, 1, 1, 2])
+    cols = st.columns([1, 1, 1, 1, 1])
     with cols[0]:
-        if st.button("Play"):
+        if st.button("Play", key="step_play"):
             sim["play"] = True
-        if st.button("Pause"):
-            sim["play"] = False
+            st.session_state["sim_autoplay"] = True
     with cols[1]:
-        if st.button("Next Step"):
-            sim_step()
+        if st.button("Pause", key="step_pause"):
+            sim["play"] = False
+            st.session_state["sim_autoplay"] = False
     with cols[2]:
-        if st.button("Reset Simulation"):
-            reset_simulation_state()
-            st.rerun()
+        if st.button("Next Step", key="step_next"):
+            sim_step()
     with cols[3]:
+        if st.button("Reset", key="step_reset"):
+            reset_simulation_state()
+            st.session_state["sim_autoplay"] = False
+            st.experimental_rerun()
+    with cols[4]:
         speed_factor = sim.get("speed_factor", st.session_state.get("sim_speed_factor", 1.0))
-        st.markdown(f"**Speed:** {speed_factor}x")
+        st.markdown(f"**Tốc độ:** {speed_factor}x")
 
     st.markdown(f"**Current Time:** {sim['current_time']}")
     running = sim.get("running")
     if running:
         st.markdown(
-            f"<div style='background:#ffe6b3;padding:8px;border-radius:4px;'>**Running:** BN{running.id} (rem={running.remaining_time})</div>",
+            f"<div style='background:#ffe6b3;padding:8px;border-radius:4px;'>**Running:** <strong>BN{running.id}</strong> (rem={running.remaining_time})</div>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown("**Running:** -")
 
     if sim.get("done"):
-        st.success("Mô phỏng đã hoàn thành.")
+        st.success("Hoàn thành mô phỏng.")
 
     if sim.get("last_changes"):
         for change in sim.get("last_changes", []):
@@ -108,8 +113,7 @@ def render_step_by_step_ui(
                     "rem": p.remaining_time,
                     "eff_prio": getattr(p, "effective_priority", p.priority),
                 }
-                for p in sim.get("ready")
-                
+                for p in sorted(sim.get("ready"), key=lambda p: (getattr(p, "effective_priority", p.priority), p.arrival_time, p.id))
             ]
         )
         ready_df = ready_df.rename(
@@ -118,7 +122,8 @@ def render_step_by_step_ui(
                 "arrival": "Thời điểm đến",
                 "rem": "Còn lại",
                 "eff_prio": "Ưu tiên",
-        })
+            }
+        )
         st.caption("Ready Queue")
         st.dataframe(ready_df, use_container_width=True)
     else:
@@ -142,10 +147,17 @@ def render_step_by_step_ui(
 
     st.session_state["sim_state"] = sim
 
-    if sim.get("play"):
-        base_delay = 0.5
-        factor = sim.get("speed_factor", st.session_state.get("sim_speed_factor", 1.0))
-        delay = base_delay / (factor if factor > 0 else 1.0)
-        time.sleep(delay)
+    # Autoplay ổn định bằng browser timer, tránh time.sleep() trong Python
+    if sim.get("play") and not sim.get("done"):
         sim_step()
-        st.rerun()
+        delay_ms = int(800 / max(0.25, sim.get("speed_factor", 1.0)))
+        components.html(
+            f"""
+            <script>
+            const delay = {delay_ms};
+            setTimeout(() => {{ window.parent.location.reload(); }}, delay);
+            </script>
+            """,
+            height=0,
+            width=0,
+        )

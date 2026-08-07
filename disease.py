@@ -1,7 +1,9 @@
 from pathlib import Path
 import json
+import streamlit as st
 
 
+@st.cache_data
 def load_diseases():
 
     file_path = Path(__file__).parent / "diseases.json"

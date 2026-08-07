@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from disease import load_diseases
-import random
 
 
 @dataclass
