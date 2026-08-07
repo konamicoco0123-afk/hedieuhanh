@@ -2,7 +2,6 @@ from typing import List
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 from algorithms import Patient, clone_patient, patient_to_row
 from simulation import make_sim_state, step_sim_state
@@ -20,7 +19,6 @@ def init_simulation_state(
     sim_state = make_sim_state(patients, algorithm, time_quantum, enable_aging, aging_interval, aging_step)
     sim_state["speed_factor"] = st.session_state.get("sim_speed_factor", sim_state.get("speed_factor", 1.0))
     st.session_state["sim_state"] = sim_state
-    st.session_state.setdefault("sim_initialized", True)
 
 
 def sim_step() -> None:
@@ -34,7 +32,6 @@ def sim_step() -> None:
 
 def reset_simulation_state() -> None:
     st.session_state.pop("sim_state", None)
-    st.session_state["sim_initialized"] = False
 
 
 def render_step_by_step_ui(
@@ -60,7 +57,7 @@ def render_step_by_step_ui(
                 aging_interval=aging_interval,
                 aging_step=aging_step,
             )
-            st.experimental_rerun()
+            st.rerun()
 
     sim = st.session_state.get("sim_state")
     if not sim:
@@ -70,19 +67,17 @@ def render_step_by_step_ui(
     with cols[0]:
         if st.button("Play", key="step_play"):
             sim["play"] = True
-            st.session_state["sim_autoplay"] = True
     with cols[1]:
         if st.button("Pause", key="step_pause"):
             sim["play"] = False
-            st.session_state["sim_autoplay"] = False
     with cols[2]:
         if st.button("Next Step", key="step_next"):
             sim_step()
+            st.rerun()
     with cols[3]:
         if st.button("Reset", key="step_reset"):
             reset_simulation_state()
-            st.session_state["sim_autoplay"] = False
-            st.experimental_rerun()
+            st.rerun()
     with cols[4]:
         speed_factor = sim.get("speed_factor", st.session_state.get("sim_speed_factor", 1.0))
         st.markdown(f"**Tốc độ:** {speed_factor}x")
@@ -147,17 +142,6 @@ def render_step_by_step_ui(
 
     st.session_state["sim_state"] = sim
 
-    # Autoplay ổn định bằng browser timer, tránh time.sleep() trong Python
     if sim.get("play") and not sim.get("done"):
         sim_step()
-        delay_ms = int(800 / max(0.25, sim.get("speed_factor", 1.0)))
-        components.html(
-            f"""
-            <script>
-            const delay = {delay_ms};
-            setTimeout(() => {{ window.parent.location.reload(); }}, delay);
-            </script>
-            """,
-            height=0,
-            width=0,
-        )
+        st.rerun()
