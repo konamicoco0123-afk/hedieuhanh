@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 import pandas as pd
@@ -32,6 +33,10 @@ def sim_step() -> None:
 
 def reset_simulation_state() -> None:
     st.session_state.pop("sim_state", None)
+
+
+def get_autoplay_delay(speed_factor: float) -> float:
+    return 0.8 / max(0.25, float(speed_factor or 1.0))
 
 
 def render_step_by_step_ui(
@@ -143,5 +148,7 @@ def render_step_by_step_ui(
     st.session_state["sim_state"] = sim
 
     if sim.get("play") and not sim.get("done"):
+        delay = get_autoplay_delay(sim.get("speed_factor", st.session_state.get("sim_speed_factor", 1.0)))
+        time.sleep(delay)
         sim_step()
         st.rerun()
