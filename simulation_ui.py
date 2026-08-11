@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from algorithms import Patient, clone_patient, calculate_metrics, run_fcfs, run_sjf, run_priority_nonpreemptive, run_priority_preemptive, run_round_robin, run_multilevel_queue
+from algorithms import Patient, clone_patient, calculate_metrics, run_fcfs, run_sjf, run_priority_nonpreemptive, run_priority_preemptive, run_round_robin
 
 
 def build_comparison_result(
@@ -21,7 +21,6 @@ def build_comparison_result(
         ("Priority P", lambda ps: run_priority_preemptive(ps, enable_aging=False, aging_interval=aging_interval, aging_step=aging_step)),
         ("Priority P + Aging", lambda ps: run_priority_preemptive(ps, enable_aging=enable_aging, aging_interval=aging_interval, aging_step=aging_step)),
         ("Round Robin", lambda ps: run_round_robin(ps, time_quantum)),
-        ("Multilevel Queue", lambda ps: run_multilevel_queue(ps, time_quantum)),
     ]:
         sim_patients, schedule = func([clone_patient(p) for p in base_patients])
         avg_wait, avg_turnaround, total_completion = calculate_metrics(sim_patients)

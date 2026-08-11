@@ -42,7 +42,6 @@ from algorithms import (
     run_priority_nonpreemptive,
     run_priority_preemptive,
     run_round_robin,
-    run_multilevel_queue,
     calculate_metrics,
 )
 from simulation_ui import build_comparison_result
@@ -94,14 +93,7 @@ with st.sidebar:
 
     algorithm = st.selectbox(
         "Chọn thuật toán",
-        [
-            "FCFS",
-            "SJF",
-            "Priority (Non-preemptive)",
-            "Priority (Preemptive)",
-            "Round Robin",
-            "Multilevel Queue",
-        ],
+        ["FCFS", "SJF", "Priority (Non-preemptive)", "Priority (Preemptive)", "Round Robin"],
     )
     st.session_state["sim_speed_factor"] = st.slider(
     "⚡ Tốc độ mô phỏng",
@@ -282,8 +274,6 @@ if st.button("Bắt đầu mô phỏng"):
                 aging_interval=st.session_state["aging_interval"],
                 aging_step=st.session_state["aging_step"],
             )
-        elif algorithm == "Multilevel Queue":
-            patients_result, schedule = run_multilevel_queue(simulation_patients, time_quantum)
         else:
             patients_result, schedule = run_round_robin(simulation_patients, time_quantum)
 
