@@ -367,7 +367,7 @@ def run_multilevel_queue(patients: List[Patient], time_quantum: int) -> Tuple[Li
     current: Optional[Patient] = None
     current_queue: Optional[str] = None
 
-    def enqueue_waiting() -> None:
+    def enqueue_arrivals() -> None:
         nonlocal waiting
         while waiting and waiting[0].arrival_time <= timeline:
             patient = waiting.pop(0)
@@ -384,57 +384,67 @@ def run_multilevel_queue(patients: List[Patient], time_quantum: int) -> Tuple[Li
         candidates = [p.arrival_time for p in waiting if p.priority in priorities]
         return min(candidates) if candidates else float("inf")
 
-    enqueue_waiting()
+    enqueue_arrivals()
 
     while waiting or queue_a or queue_b or queue_c or current:
+        # Nếu không có tiến trình đang chạy, chọn queue ưu tiên nhất hiện tại.
         if current is None:
+            enqueue_arrivals()
             if queue_a:
-                queue_a.sort(key=lambda p: (p.priority, p.arrival_time))
+                # Queue A luôn được ưu tiên tuyệt đối.
+                queue_a.sort(key=lambda p: p.arrival_time)
                 current = queue_a.pop(0)
                 current_queue = "A"
             elif queue_b:
+                # Queue B dùng SJF non-preemptive nội bộ.
                 queue_b.sort(key=lambda p: (p.remaining_time, p.arrival_time))
                 current = queue_b.pop(0)
                 current_queue = "B"
             elif queue_c:
+                # Queue C dùng Round Robin với time_quantum.
                 current = queue_c.popleft()
                 current_queue = "C"
             else:
                 if waiting:
                     timeline = waiting[0].arrival_time
-                    enqueue_waiting()
+                    enqueue_arrivals()
                     continue
                 break
 
             if current.start_time == 0 and current.remaining_time == current.burst_time:
                 current.start_time = timeline
 
-        next_a_arrival = next_arrival_time({1})
-        next_ab_arrival = next_arrival_time({1, 2, 3})
+        # Tính thời gian chạy cho lần này theo quy tắc ưu tiên.
         if current_queue == "A":
+            # Queue A chạy đến xong; chỉ bị preempt bởi một bệnh nhân A khác nếu priority thay đổi.
             run_time = current.remaining_time
         elif current_queue == "B":
+            # Queue B chỉ bị preempt bởi queue A.
             run_time = current.remaining_time
-            if next_a_arrival < timeline + run_time:
-                run_time = next_a_arrival - timeline
+            next_a = next_arrival_time({1})
+            if next_a < timeline + run_time:
+                run_time = next_a - timeline
         else:
+            # Queue C bị preempt bởi queue A hoặc queue B.
             run_time = min(current.remaining_time, time_quantum)
-            if next_ab_arrival < timeline + run_time:
-                run_time = next_ab_arrival - timeline
+            next_ab = next_arrival_time({1, 2, 3})
+            if next_ab < timeline + run_time:
+                run_time = next_ab - timeline
 
         if run_time <= 0:
             if waiting:
                 timeline = waiting[0].arrival_time
-                enqueue_waiting()
+                enqueue_arrivals()
                 continue
             break
 
         schedule.append({"patient_id": current.id, "start": timeline, "duration": run_time})
         current.remaining_time -= run_time
         timeline += run_time
-        enqueue_waiting()
+        enqueue_arrivals()
 
         if current.remaining_time == 0:
+            # Hoàn thành bệnh nhân hiện tại.
             current.completion_time = timeline
             current.turnaround_time = current.completion_time - current.arrival_time
             current.waiting_time = current.turnaround_time - current.burst_time
@@ -443,31 +453,16 @@ def run_multilevel_queue(patients: List[Patient], time_quantum: int) -> Tuple[Li
             current_queue = None
             continue
 
+        # Nếu bệnh nhân chưa xong, trả lại vào queue đúng tầng.
         if current_queue == "A":
             queue_a.append(current)
-            current = None
-            current_queue = None
-            continue
-        if current_queue == "B":
-            if queue_a:
-                queue_b.append(current)
-                current = None
-                current_queue = None
-                continue
+        elif current_queue == "B":
             queue_b.append(current)
-            current = None
-            current_queue = None
-            continue
-        if current_queue == "C":
-            if queue_a or queue_b:
-                queue_c.append(current)
-                current = None
-                current_queue = None
-                continue
+        else:
             queue_c.append(current)
-            current = None
-            current_queue = None
-            continue
+
+        current = None
+        current_queue = None
 
     return completed, schedule
 
