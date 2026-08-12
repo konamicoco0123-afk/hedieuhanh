@@ -1,4 +1,5 @@
 ﻿from typing import Dict, List
+import io
 
 import pandas as pd
 import streamlit as st
@@ -326,9 +327,30 @@ if result is not None:
 
     result_df = result_df.rename(columns=COLUMN_NAMES)
 
+    csv_bytes = result_df.to_csv(index=False, encoding="utf-8").encode("utf-8")
+    gantt_fig = draw_gantt_chart(result["schedule"], title=f"Gantt chart - {result['algorithm']}")
+    png_buffer = io.BytesIO()
+    gantt_fig.savefig(png_buffer, format="png", bbox_inches="tight")
+    png_buffer.seek(0)
+
+    col_export_1, col_export_2 = st.columns(2)
+    with col_export_1:
+        st.download_button(
+            label="Tải CSV kết quả bệnh nhân",
+            data=csv_bytes,
+            file_name="ketqua_benhnhan.csv",
+            mime="text/csv",
+        )
+    with col_export_2:
+        st.download_button(
+            label="Tải ảnh Gantt (PNG)",
+            data=png_buffer,
+            file_name="gantt_chart.png",
+            mime="image/png",
+        )
+
     st.dataframe(result_df, use_container_width=True)
 
-    gantt_fig = draw_gantt_chart(result["schedule"], title=f"Gantt chart - {result['algorithm']}")
     st.pyplot(gantt_fig)
 
     avg_wait, avg_turnaround, _ = calculate_metrics(result["patients"])
