@@ -32,6 +32,8 @@ COLUMN_NAMES = {
     "turnaround_time": "Thời gian hoàn thành",
     "start_time": "Bắt đầu khám",
     "completion_time": "Kết thúc khám",
+    "state": "Trạng thái",
+    "io_time_remaining": "I/O còn lại",
 }
 from algorithms import (
     Patient,

@@ -111,6 +111,7 @@ def render_step_by_step_ui(
                     "id": p.id,
                     "arrival": p.arrival_time,
                     "rem": p.remaining_time,
+                    "state": p.state,
                     "eff_prio": getattr(p, "effective_priority", p.priority),
                 }
                 for p in sorted(sim.get("ready"), key=lambda p: (getattr(p, "effective_priority", p.priority), p.arrival_time, p.id))
@@ -121,6 +122,7 @@ def render_step_by_step_ui(
                 "id": "Mã BN",
                 "arrival": "Thời điểm đến",
                 "rem": "Còn lại",
+                "state": "Trạng thái",
                 "eff_prio": "Ưu tiên",
             }
         )
@@ -128,6 +130,31 @@ def render_step_by_step_ui(
         st.dataframe(ready_df, use_container_width=True)
     else:
         st.caption("Ready Queue: (trống)")
+
+    if sim.get("waiting_io"):
+        waiting_df = pd.DataFrame(
+            [
+                {
+                    "id": p.id,
+                    "state": p.state,
+                    "io_remaining": p.io_time_remaining,
+                    "rem": p.remaining_time,
+                }
+                for p in sim.get("waiting_io")
+            ]
+        )
+        waiting_df = waiting_df.rename(
+            columns={
+                "id": "Mã BN",
+                "state": "Trạng thái",
+                "io_remaining": "I/O còn lại",
+                "rem": "Còn lại",
+            }
+        )
+        st.caption("Waiting (I/O)")
+        st.dataframe(waiting_df, use_container_width=True)
+    else:
+        st.caption("Waiting (I/O): (trống)")
 
     if sim.get("completed"):
         comp_df = pd.DataFrame([patient_to_row(p) for p in sim.get("completed")])

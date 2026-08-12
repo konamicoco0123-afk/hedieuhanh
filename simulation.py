@@ -10,6 +10,7 @@ def make_sim_state(patients: List[Patient], algorithm: str, time_quantum: int = 
         "current_time": 0,
         "future": future,
         "ready": [],
+        "waiting_io": [],
         "running": None,
         "completed": [],
         "schedule": [],
@@ -34,9 +35,23 @@ def step_sim_state(sim: Dict) -> Dict:
     t = sim["current_time"]
     sim["last_changes"] = []
 
+    def process_waiting_io() -> None:
+        """Cập nhật thời gian chờ I/O cho bệnh nhân đang WAITING."""
+        completed_io = []
+        for p in list(sim["waiting_io"]):
+            p.io_time_remaining -= 1
+            if p.io_time_remaining <= 0:
+                p.state = "READY"
+                p.waiting_start_time = sim["current_time"]
+                sim["ready"].append(p)
+                completed_io.append(p)
+        for p in completed_io:
+            sim["waiting_io"].remove(p)
+
     # move arrivals
     while sim["future"] and sim["future"][0].arrival_time <= t:
         p = sim["future"].popleft()
+        p.state = "READY"
         if p.waiting_start_time <= 0:
             p.waiting_start_time = t
         sim["ready"].append(p)
@@ -97,6 +112,7 @@ def step_sim_state(sim: Dict) -> Dict:
             cand = pick_pr_p_candidate()
             if cand:
                 sim["ready"].remove(cand)
+                cand.state = "RUNNING"
                 sim["running"] = cand
                 sim["running_segment_start"] = t
                 if cand.start_time == 0 and cand.remaining_time == cand.burst_time:
@@ -115,9 +131,11 @@ def step_sim_state(sim: Dict) -> Dict:
                     start = sim.get("running_segment_start")
                     if start is not None and end - start > 0:
                         sim["schedule"].append({"patient_id": running.id, "start": start, "duration": end - start})
+                    running.state = "READY"
                     running.waiting_start_time = t
                     sim["ready"].append(running)
                     sim["ready"].remove(best)
+                    best.state = "RUNNING"
                     sim["running"] = best
                     sim["running_segment_start"] = t
 
@@ -126,6 +144,7 @@ def step_sim_state(sim: Dict) -> Dict:
         if alg == "FCFS":
             next_p = pick_fcfs()
             if next_p:
+                next_p.state = "RUNNING"
                 sim["running"] = next_p
                 sim["running_segment_start"] = t
                 if next_p.start_time == 0 and next_p.remaining_time == next_p.burst_time:
@@ -133,6 +152,7 @@ def step_sim_state(sim: Dict) -> Dict:
         elif alg == "SJF":
             next_p = pick_sjf()
             if next_p:
+                next_p.state = "RUNNING"
                 sim["running"] = next_p
                 sim["running_segment_start"] = t
                 if next_p.start_time == 0 and next_p.remaining_time == next_p.burst_time:
@@ -140,6 +160,7 @@ def step_sim_state(sim: Dict) -> Dict:
         elif alg == "Priority (Non-preemptive)":
             next_p = pick_pr_np()
             if next_p:
+                next_p.state = "RUNNING"
                 sim["running"] = next_p
                 sim["running_segment_start"] = t
                 if next_p.start_time == 0 and next_p.remaining_time == next_p.burst_time:
@@ -147,6 +168,7 @@ def step_sim_state(sim: Dict) -> Dict:
         elif alg == "Round Robin":
             next_p = pick_rr()
             if next_p:
+                next_p.state = "RUNNING"
                 sim["running"] = next_p
                 sim["running_segment_start"] = t
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
@@ -184,40 +206,45 @@ def step_sim_state(sim: Dict) -> Dict:
         if alg == "Round Robin":
             sim["rr_slice_remaining"] -= 1
 
-        if running.remaining_time <= 0:
-            # close segment including this unit
-            sim["current_time"] += 1
-            start = sim.get("running_segment_start")
-            end = sim["current_time"]
-            if start is not None and end - start > 0:
-                sim["schedule"].append({"patient_id": running.id, "start": start, "duration": end - start})
+        sim["current_time"] += 1
+        start = sim.get("running_segment_start")
+        end = sim["current_time"]
+        if start is not None and end - start > 0:
+            sim["schedule"].append({"patient_id": running.id, "start": start, "duration": end - start})
+
+        if not running.has_been_to_io:
+            running.io_time_remaining = 2
+            running.state = "WAITING"
+            running.has_been_to_io = True
+            sim["waiting_io"].append(running)
+            sim["running"] = None
+            sim["running_segment_start"] = None
+        elif running.remaining_time == 0:
             running.completion_time = sim["current_time"]
             running.turnaround_time = running.completion_time - running.arrival_time
             running.waiting_time = running.turnaround_time - running.burst_time
+            running.state = "TERMINATED"
             sim["completed"].append(running)
             sim["running"] = None
             sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
+        elif alg == "Round Robin" and sim["rr_slice_remaining"] <= 0:
+            while sim["future"] and sim["future"][0].arrival_time <= sim["current_time"]:
+                p = sim["future"].popleft()
+                p.state = "READY"
+                if p.waiting_start_time <= 0:
+                    p.waiting_start_time = sim["current_time"]
+                sim["ready"].append(p)
+            running.state = "READY"
+            running.waiting_start_time = sim["current_time"]
+            sim["ready"].append(running)
+            sim["running"] = None
+            sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
         else:
-            if alg == "Round Robin" and sim["rr_slice_remaining"] <= 0:
-                sim["current_time"] += 1
-                start = sim.get("running_segment_start")
-                end = sim["current_time"]
-                if start is not None and end - start > 0:
-                    sim["schedule"].append({"patient_id": running.id, "start": start, "duration": end - start})
-                # move arrivals that happened up to the new current_time before re-queueing
-                while sim["future"] and sim["future"][0].arrival_time <= sim["current_time"]:
-                    p = sim["future"].popleft()
-                    if p.waiting_start_time <= 0:
-                        p.waiting_start_time = sim["current_time"]
-                    sim["ready"].append(p)
-                running.waiting_start_time = sim["current_time"]
-                sim["ready"].append(running)
-                sim["running"] = None
-                sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
-            else:
-                sim["current_time"] += 1
+            sim["running_segment_start"] = sim["current_time"]
     else:
         sim["current_time"] += 1
+
+    process_waiting_io()
 
     # If a forced split was requested for the aging boundary after this unit,
     # close and reopen the running segment now (if still running).

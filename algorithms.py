@@ -21,6 +21,9 @@ class Patient:
     start_time: float = 0.0
     completion_time: float = 0.0
     waiting_start_time: float = 0.0
+    state: str = "NEW"
+    io_time_remaining: int = 0
+    has_been_to_io: bool = False
     effective_priority: int = field(init=False)
 
     def __post_init__(self) -> None:
@@ -96,19 +99,33 @@ def patient_to_row(patient):
 
         "start_time": patient.start_time,
 
-        "completion_time": patient.completion_time
+        "completion_time": patient.completion_time,
+
+        "state": patient.state,
+
+        "io_time_remaining": patient.io_time_remaining,
 
     }
 
 
 def clone_patient(patient: Patient) -> Patient:
-    return Patient(
+    cloned = Patient(
         id=patient.id,
         arrival_time=patient.arrival_time,
         burst_time=patient.burst_time,
         priority=patient.priority,
-        disease=patient.disease
+        disease=patient.disease,
     )
+    cloned.state = patient.state
+    cloned.io_time_remaining = patient.io_time_remaining
+    cloned.has_been_to_io = patient.has_been_to_io
+    cloned.waiting_start_time = patient.waiting_start_time
+    cloned.start_time = patient.start_time
+    cloned.completion_time = patient.completion_time
+    cloned.waiting_time = patient.waiting_time
+    cloned.turnaround_time = patient.turnaround_time
+    cloned.effective_priority = patient.effective_priority
+    return cloned
 
 
 def build_gantt_schedule(patients: List[Patient]) -> List[Dict[str, float]]:
