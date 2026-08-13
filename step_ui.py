@@ -89,6 +89,29 @@ def render_step_by_step_ui(
 
     st.markdown(f"**Current Time:** {sim['current_time']}")
 
+    status_map = {
+        "NEW": len(sim.get("future", [])),
+        "READY": len(sim.get("ready", [])),
+        "RUNNING": 1 if sim.get("running") else 0,
+        "WAITING": len(sim.get("waiting_io", [])),
+        "TERMINATED": len(sim.get("completed", [])),
+    }
+    status_colors = {
+        "NEW": "#eef3ff",
+        "READY": "#eafaf1",
+        "RUNNING": "#fff3d6",
+        "WAITING": "#fff0f0",
+        "TERMINATED": "#f2f2f2",
+    }
+    status_cols = st.columns(5)
+    for col, label in zip(status_cols, ["NEW", "READY", "RUNNING", "WAITING", "TERMINATED"]):
+        value = status_map.get(label, 0)
+        color = status_colors.get(label, "#f2f2f2")
+        col.markdown(
+            f"<div style='padding:10px 12px; border:1px solid #dfe3e8; border-radius:8px; background:{color}; text-align:center;'><div style='font-size:12px; color:#374151;'> {label} </div><div style='font-size:22px; font-weight:700; color:#111827;'> {value} </div></div>",
+            unsafe_allow_html=True,
+        )
+
     new_df = pd.DataFrame(
         [
             {
@@ -226,11 +249,11 @@ def render_step_by_step_ui(
         st.dataframe(comp_df, use_container_width=True)
 
     summary = (
-        f"NEW: {len(sim.get('future', []))} | "
-        f"READY: {len(sim.get('ready', []))} | "
-        f"RUNNING: {1 if sim.get('running') else 0} | "
-        f"WAITING: {len(sim.get('waiting_io', []))} | "
-        f"TERMINATED: {len(sim.get('completed', []))}"
+        f"NEW: {status_map.get('NEW', 0)} | "
+        f"READY: {status_map.get('READY', 0)} | "
+        f"RUNNING: {status_map.get('RUNNING', 0)} | "
+        f"WAITING: {status_map.get('WAITING', 0)} | "
+        f"TERMINATED: {status_map.get('TERMINATED', 0)}"
     )
     st.caption(summary)
 
