@@ -24,6 +24,7 @@ class Patient:
     state: str = "NEW"
     io_time_remaining: int = 0
     has_been_to_io: bool = False
+    io_enter_time: float = 0.0
     effective_priority: int = field(init=False)
 
     def __post_init__(self) -> None:
@@ -119,6 +120,7 @@ def clone_patient(patient: Patient) -> Patient:
     cloned.state = patient.state
     cloned.io_time_remaining = patient.io_time_remaining
     cloned.has_been_to_io = patient.has_been_to_io
+    cloned.io_enter_time = patient.io_enter_time
     cloned.waiting_start_time = patient.waiting_start_time
     cloned.start_time = patient.start_time
     cloned.completion_time = patient.completion_time

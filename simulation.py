@@ -45,7 +45,9 @@ def step_sim_state(sim: Dict) -> Dict:
         """Cập nhật thời gian chờ I/O cho bệnh nhân đang WAITING."""
         completed_io = []
         for p in list(sim["waiting_io"]):
-            p.io_time_remaining -= 1
+            # Skip decrement on the same tick patient entered WAITING (to avoid off-by-one)
+            if sim["current_time"] > p.io_enter_time:
+                p.io_time_remaining -= 1
             if p.io_time_remaining <= 0:
                 if p.remaining_time == 0:
                     p.state = "TERMINATED"
@@ -261,6 +263,7 @@ def step_sim_state(sim: Dict) -> Dict:
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
             elif running.burst_time >= 5:
                 running.io_time_remaining = 2
+                running.io_enter_time = sim["current_time"]
                 running.state = "WAITING"
                 running.has_been_to_io = True
                 sim["waiting_io"].append(running)
