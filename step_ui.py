@@ -88,61 +88,103 @@ def render_step_by_step_ui(
         st.markdown(f"**Tốc độ:** {speed_factor}x")
 
     st.markdown(f"**Current Time:** {sim['current_time']}")
+
+    new_df = pd.DataFrame(
+        [
+            {
+                "id": p.id,
+                "arrival": p.arrival_time,
+                "burst": p.burst_time,
+                "priority": getattr(p, "effective_priority", p.priority),
+                "state": "NEW",
+            }
+            for p in sim.get("future", [])
+        ]
+    )
+    if not new_df.empty:
+        new_df = new_df.rename(
+            columns={
+                "id": "Mã BN",
+                "arrival": "Thời điểm đến",
+                "burst": "Thời gian khám",
+                "priority": "Ưu tiên",
+                "state": "Trạng thái",
+            }
+        )
+    st.caption("New")
+    if new_df.empty:
+        st.write("New: (trống)")
+    else:
+        st.dataframe(new_df, use_container_width=True)
+
     running = sim.get("running")
     if running:
-        st.markdown(
-            f"<div style='background:#ffe6b3;padding:8px;border-radius:4px;'>**Running:** <strong>BN{running.id}</strong> (rem={running.remaining_time})</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown("**Running:** -")
-
-    if sim.get("done"):
-        st.success("Hoàn thành mô phỏng.")
-
-    if sim.get("last_changes"):
-        for change in sim.get("last_changes", []):
-            st.info(change)
-
-    if sim.get("ready"):
-        ready_df = pd.DataFrame(
+        running_df = pd.DataFrame(
             [
                 {
-                    "id": p.id,
-                    "arrival": p.arrival_time,
-                    "rem": p.remaining_time,
-                    "state": p.state,
-                    "eff_prio": getattr(p, "effective_priority", p.priority),
+                    "id": running.id,
+                    "arrival": running.arrival_time,
+                    "rem": running.remaining_time,
+                    "priority": getattr(running, "effective_priority", running.priority),
+                    "state": "RUNNING",
                 }
-                for p in sorted(sim.get("ready"), key=lambda p: (getattr(p, "effective_priority", p.priority), p.arrival_time, p.id))
             ]
         )
+        running_df = running_df.rename(
+            columns={
+                "id": "Mã BN",
+                "arrival": "Thời điểm đến",
+                "rem": "Còn lại",
+                "priority": "Ưu tiên",
+                "state": "Trạng thái",
+            }
+        )
+        st.caption("Running")
+        st.dataframe(running_df, use_container_width=True)
+    else:
+        st.caption("Running")
+        st.write("Running: (trống)")
+
+    ready_df = pd.DataFrame(
+        [
+            {
+                "id": p.id,
+                "arrival": p.arrival_time,
+                "rem": p.remaining_time,
+                "priority": getattr(p, "effective_priority", p.priority),
+                "state": p.state,
+            }
+            for p in sorted(sim.get("ready", []), key=lambda p: (getattr(p, "effective_priority", p.priority), p.arrival_time, p.id))
+        ]
+    )
+    if not ready_df.empty:
         ready_df = ready_df.rename(
             columns={
                 "id": "Mã BN",
                 "arrival": "Thời điểm đến",
                 "rem": "Còn lại",
+                "priority": "Ưu tiên",
                 "state": "Trạng thái",
-                "eff_prio": "Ưu tiên",
             }
         )
-        st.caption("Ready Queue")
-        st.dataframe(ready_df, use_container_width=True)
+    st.caption("Ready Queue")
+    if ready_df.empty:
+        st.write("Ready Queue: (trống)")
     else:
-        st.caption("Ready Queue: (trống)")
+        st.dataframe(ready_df, use_container_width=True)
 
-    if sim.get("waiting_io"):
-        waiting_df = pd.DataFrame(
-            [
-                {
-                    "id": p.id,
-                    "state": p.state,
-                    "io_remaining": p.io_time_remaining,
-                    "rem": p.remaining_time,
-                }
-                for p in sim.get("waiting_io")
-            ]
-        )
+    waiting_df = pd.DataFrame(
+        [
+            {
+                "id": p.id,
+                "state": p.state,
+                "io_remaining": p.io_time_remaining,
+                "rem": p.remaining_time,
+            }
+            for p in sim.get("waiting_io", [])
+        ]
+    )
+    if not waiting_df.empty:
         waiting_df = waiting_df.rename(
             columns={
                 "id": "Mã BN",
@@ -151,15 +193,53 @@ def render_step_by_step_ui(
                 "rem": "Còn lại",
             }
         )
-        st.caption("Waiting (I/O)")
-        st.dataframe(waiting_df, use_container_width=True)
+    st.caption("Waiting (I/O)")
+    if waiting_df.empty:
+        st.write("Waiting (I/O): (trống)")
     else:
-        st.caption("Waiting (I/O): (trống)")
+        st.dataframe(waiting_df, use_container_width=True)
 
-    if sim.get("completed"):
-        comp_df = pd.DataFrame([patient_to_row(p) for p in sim.get("completed")])
-        st.caption("Completed")
+    comp_df = pd.DataFrame([patient_to_row(p) for p in sim.get("completed", [])])
+    if not comp_df.empty:
+        comp_df = comp_df.rename(
+            columns={
+                "id": "Mã BN",
+                "disease": "Bệnh",
+                "arrival_time": "Thời điểm đến",
+                "burst_time": "Thời gian khám",
+                "priority": "Ưu tiên",
+                "effective_priority": "Ưu tiên hiệu dụng",
+                "remaining_time": "Còn lại",
+                "waiting_time": "Thời gian chờ",
+                "waiting_start_time": "Bắt đầu chờ",
+                "turnaround_time": "Thời gian quay vòng",
+                "start_time": "Thời điểm bắt đầu",
+                "completion_time": "Thời điểm kết thúc",
+                "state": "Trạng thái",
+                "io_time_remaining": "I/O còn lại",
+            }
+        )
+    st.caption("Completed")
+    if comp_df.empty:
+        st.write("Completed: (trống)")
+    else:
         st.dataframe(comp_df, use_container_width=True)
+
+    summary = (
+        f"NEW: {len(sim.get('future', []))} | "
+        f"READY: {len(sim.get('ready', []))} | "
+        f"RUNNING: {1 if sim.get('running') else 0} | "
+        f"WAITING: {len(sim.get('waiting_io', []))} | "
+        f"TERMINATED: {len(sim.get('completed', []))}"
+    )
+    st.caption(summary)
+
+    if sim.get("done"):
+        st.success("Hoàn thành mô phỏng.")
+
+    if sim.get("last_changes"):
+        for change in sim.get("last_changes", []):
+            st.info(change)
 
     temp_schedule = list(sim.get("schedule", []))
     running = sim.get("running")
