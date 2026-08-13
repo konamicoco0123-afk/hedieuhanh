@@ -14,6 +14,7 @@ def make_sim_state(patients: List[Patient], algorithm: str, time_quantum: int = 
         "running": None,
         "completed": [],
         "schedule": [],
+        "logs": [],
         "algorithm": algorithm,
         "time_quantum": time_quantum,
         "rr_slice_remaining": time_quantum,
@@ -35,6 +36,11 @@ def step_sim_state(sim: Dict) -> Dict:
     t = sim["current_time"]
     sim["last_changes"] = []
 
+    def log(message: str) -> None:
+        sim.setdefault("logs", []).append(f"[t={sim['current_time']}] {message}")
+        if len(sim["logs"]) > 200:
+            sim["logs"] = sim["logs"][-200:]
+
     def process_waiting_io() -> None:
         """Cập nhật thời gian chờ I/O cho bệnh nhân đang WAITING."""
         completed_io = []
@@ -47,10 +53,12 @@ def step_sim_state(sim: Dict) -> Dict:
                     p.turnaround_time = p.completion_time - p.arrival_time
                     p.waiting_time = p.turnaround_time - p.burst_time
                     sim["completed"].append(p)
+                    log(f"BN{p.id} hoàn tất I/O và TERMINATED")
                 else:
                     p.state = "READY"
                     p.waiting_start_time = sim["current_time"]
                     sim["ready"].append(p)
+                    log(f"BN{p.id} hoàn thành I/O → quay lại READY")
                 completed_io.append(p)
         for p in completed_io:
             sim["waiting_io"].remove(p)
@@ -64,6 +72,7 @@ def step_sim_state(sim: Dict) -> Dict:
         if p.waiting_start_time <= 0:
             p.waiting_start_time = t
         sim["ready"].append(p)
+        log(f"BN{p.id} đến (arrival) → READY")
 
     # aging updates
     if sim.get("enable_aging"):
@@ -126,6 +135,7 @@ def step_sim_state(sim: Dict) -> Dict:
                 sim["running_segment_start"] = t
                 if cand.start_time == 0 and cand.remaining_time == cand.burst_time:
                     cand.start_time = t
+                log(f"BN{cand.id} được chọn vào RUNNING")
         else:
             # update effective priorities
             for p in sim["ready"]:
@@ -144,9 +154,11 @@ def step_sim_state(sim: Dict) -> Dict:
                     running.waiting_start_time = t
                     sim["ready"].append(running)
                     sim["ready"].remove(best)
+                    log(f"BN{running.id} bị preempt bởi BN{best.id}")
                     best.state = "RUNNING"
                     sim["running"] = best
                     sim["running_segment_start"] = t
+                    log(f"BN{best.id} được chọn vào RUNNING")
 
     # if no running, pick based on algorithm
     if sim.get("running") is None:
@@ -163,6 +175,7 @@ def step_sim_state(sim: Dict) -> Dict:
                     next_p.state = "RUNNING"
                     sim["running"] = next_p
                     sim["running_segment_start"] = t
+                    log(f"BN{next_p.id} được chọn vào RUNNING")
                     if next_p.start_time == 0 and next_p.remaining_time == next_p.burst_time:
                         next_p.start_time = t
         elif alg == "SJF":
@@ -188,6 +201,7 @@ def step_sim_state(sim: Dict) -> Dict:
                 sim["running"] = next_p
                 sim["running_segment_start"] = t
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
+                log(f"BN{next_p.id} được chọn vào RUNNING")
                 if next_p.start_time == 0 and next_p.remaining_time == next_p.burst_time:
                     next_p.start_time = t
 
@@ -226,6 +240,10 @@ def step_sim_state(sim: Dict) -> Dict:
         running.remaining_time -= 1
         if alg == "Round Robin":
             sim["rr_slice_remaining"] -= 1
+            # RR is a pure quantum-based scheduler: do not force the generic
+            # WAITING/I/O transition used by the step-by-step test model for
+            # CPU jobs with long bursts.
+            running.has_been_to_io = True
 
         sim["current_time"] += 1
 
@@ -237,6 +255,7 @@ def step_sim_state(sim: Dict) -> Dict:
                 running.waiting_time = running.turnaround_time - running.burst_time
                 running.state = "TERMINATED"
                 sim["completed"].append(running)
+                log(f"BN{running.id} TERMINATED")
                 sim["running"] = None
                 sim["running_segment_start"] = None
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
@@ -245,11 +264,13 @@ def step_sim_state(sim: Dict) -> Dict:
                 running.state = "WAITING"
                 running.has_been_to_io = True
                 sim["waiting_io"].append(running)
+                log(f"BN{running.id} chuyển sang WAITING (đi I/O)")
                 sim["running"] = None
                 sim["running_segment_start"] = None
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
             else:
                 running.has_been_to_io = True
+                log(f"BN{running.id} tiếp tục RUNNING (burst_time < 5)")
                 sim["running_segment_start"] = sim["current_time"]
         else:
             if running.remaining_time == 0:
@@ -259,6 +280,7 @@ def step_sim_state(sim: Dict) -> Dict:
                 running.waiting_time = running.turnaround_time - running.burst_time
                 running.state = "TERMINATED"
                 sim["completed"].append(running)
+                log(f"BN{running.id} TERMINATED")
                 sim["running"] = None
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
             elif alg == "Round Robin" and sim["rr_slice_remaining"] <= 0:
@@ -273,9 +295,10 @@ def step_sim_state(sim: Dict) -> Dict:
                 running.waiting_start_time = sim["current_time"]
                 sim["ready"].append(running)
                 sim["running"] = None
+                sim["running_segment_start"] = None
                 sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
             else:
-                # Continue current running segment.
+                # Continue the current RR quantum without forcing the I/O WAITING branch.
                 pass
     else:
         sim["current_time"] += 1

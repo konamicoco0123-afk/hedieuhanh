@@ -260,6 +260,15 @@ def render_step_by_step_ui(
     if sim.get("done"):
         st.success("Hoàn thành mô phỏng.")
 
+    with st.expander("Nhật ký vận hành", expanded=False):
+        logs = list(sim.get("logs", []))
+        recent_logs = logs[-80:]
+        if recent_logs:
+            for entry in reversed(recent_logs):
+                st.text(entry)
+        else:
+            st.write("Chưa có sự kiện nào.")
+
     if sim.get("last_changes"):
         for change in sim.get("last_changes", []):
             st.info(change)
