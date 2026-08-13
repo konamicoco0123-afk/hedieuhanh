@@ -230,14 +230,27 @@ def step_sim_state(sim: Dict) -> Dict:
         sim["current_time"] += 1
 
         if not running.has_been_to_io:
-            # Sau 1 đơn vị RUNNING đầu tiên, bệnh nhân sẽ đi WAITING.
             close_running_segment(sim["current_time"])
-            running.io_time_remaining = 2
-            running.state = "WAITING"
-            running.has_been_to_io = True
-            sim["waiting_io"].append(running)
-            sim["running"] = None
-            sim["running_segment_start"] = None
+            if running.remaining_time == 0:
+                running.completion_time = sim["current_time"]
+                running.turnaround_time = running.completion_time - running.arrival_time
+                running.waiting_time = running.turnaround_time - running.burst_time
+                running.state = "TERMINATED"
+                sim["completed"].append(running)
+                sim["running"] = None
+                sim["running_segment_start"] = None
+                sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
+            elif running.burst_time >= 5:
+                running.io_time_remaining = 2
+                running.state = "WAITING"
+                running.has_been_to_io = True
+                sim["waiting_io"].append(running)
+                sim["running"] = None
+                sim["running_segment_start"] = None
+                sim["rr_slice_remaining"] = sim.get("time_quantum", 2)
+            else:
+                running.has_been_to_io = True
+                sim["running_segment_start"] = sim["current_time"]
         else:
             if running.remaining_time == 0:
                 close_running_segment(sim["current_time"])
