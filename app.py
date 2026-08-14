@@ -80,7 +80,7 @@ st.markdown(
         border-right: 1px solid var(--border);
     }
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 3.5rem;
         padding-bottom: 2rem;
     }
     h1, h2, h3 {
@@ -428,8 +428,10 @@ with main_tabs[0]:
         metric_cols[0].metric("Avg Waiting", f"{avg_wait:.2f}")
         metric_cols[1].metric("Avg TAT", f"{avg_turnaround:.2f}")
         st.caption("Batch = thuật toán thuần; Step-by-step có thêm trạng thái WAITING khi burst ≥ 5.")
-    else:
+    elif st.session_state.get("patients"):
         st.info("Đã có dữ liệu bệnh nhân. Vui lòng bấm 'Bắt đầu mô phỏng' để xem kết quả.")
+    else:
+        st.info("Chưa có dữ liệu. Hãy bốc số ngẫu nhiên hoặc khởi tạo nhập tay.")
 
 with main_tabs[1]:
     comparison_result = st.session_state.get("comparison_result")
