@@ -66,7 +66,7 @@ try:
         except Exception:
             pass
         try:
-            c2.image(str(_logo_dir / "logobenhvien.png"), width=96, clamp=True, output_format="PNG")
+            c2.image(str(_logo_dir / "logobenhvien.png"), width=72, clamp=True, output_format="PNG")
         except Exception:
             pass
 except Exception:
