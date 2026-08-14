@@ -18,6 +18,7 @@ def init_simulation_state(
     aging_step: int = 1,
 ) -> None:
     sim_state = make_sim_state(patients, algorithm, time_quantum, enable_aging, aging_interval, aging_step)
+    sim_state["logs"] = []
     sim_state["speed_factor"] = st.session_state.get("sim_speed_factor", sim_state.get("speed_factor", 1.0))
     st.session_state["sim_state"] = sim_state
 
@@ -262,10 +263,8 @@ def render_step_by_step_ui(
 
     with st.expander("Nhật ký vận hành", expanded=False):
         logs = list(sim.get("logs", []))
-        recent_logs = logs[-80:]
-        if recent_logs:
-            for entry in reversed(recent_logs):
-                st.text(entry)
+        if logs:
+            st.code("\n".join(logs[-120:]), language="text")
         else:
             st.write("Chưa có sự kiện nào.")
 
