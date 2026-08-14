@@ -313,9 +313,6 @@ with main_tabs[0]:
         },
     )
 
-    if not st.session_state["patients"]:
-        st.caption("Chưa có dữ liệu. Hãy bấm 'Bốc số ngẫu nhiên' hoặc 'Khởi tạo nhập tay'.")
-
     if edited_df is not None and st.button("Cập nhật dữ liệu bệnh nhân", key="update_patients_btn"):
         updated_patients: List[Patient] = []
         validation_errors: List[str] = []
@@ -480,6 +477,3 @@ with main_tabs[2]:
         st.session_state.get("aging_interval", 3),
         st.session_state.get("aging_step", 1),
     )
-
-if not st.session_state.get("patients"):
-    st.info("Chưa có dữ liệu bệnh nhân. Bạn có thể bốc số ngẫu nhiên hoặc nhập tay rồi cập nhật.")
