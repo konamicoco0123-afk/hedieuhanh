@@ -56,7 +56,7 @@ def generate_random_patients(count):
 
     for i in range(count):
 
-        priority = (i % 5) + 1
+        priority = random.randint(1, 5)
 
         disease = random.choice(
             priority_groups[priority]
