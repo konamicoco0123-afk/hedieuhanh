@@ -311,7 +311,6 @@ with main_tabs[0]:
         num_rows="dynamic",
         use_container_width=True,
         key="patient_editor",
-        on_change=update_priority,
         column_config={
             "Loại bệnh": st.column_config.SelectboxColumn("Loại bệnh", options=disease_options, required=True),
             "Mức ưu tiên": st.column_config.NumberColumn("Mức ưu tiên", disabled=True),
@@ -322,10 +321,9 @@ with main_tabs[0]:
         edited_df = edited_df.get("data", edited_df)
 
     if isinstance(edited_df, pd.DataFrame):
-        for index in edited_df.index:
-            disease = edited_df.at[index, "Loại bệnh"]
-            if pd.notna(disease):
-                edited_df.at[index, "Mức ưu tiên"] = get_priority_by_disease(disease)
+        edited_df["Mức ưu tiên"] = edited_df["Loại bệnh"].map(
+            lambda disease: get_priority_by_disease(disease) if pd.notna(disease) else None
+        )
 
     if edited_df is not None and st.button("Cập nhật dữ liệu bệnh nhân", key="update_patients_btn"):
         updated_patients: List[Patient] = []
