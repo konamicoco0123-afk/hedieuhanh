@@ -300,6 +300,8 @@ else:
     patient_df = pd.DataFrame(columns=DISPLAY_COLUMNS)
 
 display_df = patient_df.rename(columns=COLUMN_NAMES)
+if "patient_editor_data" not in st.session_state:
+    st.session_state["patient_editor_data"] = display_df.copy()
 disease_options = [d["disease"] for d in load_diseases()]
 
 main_tabs = st.tabs(["Danh sách bệnh nhân + mô phỏng", "So sánh thuật toán", "Mô phỏng từng bước"])
@@ -307,7 +309,7 @@ main_tabs = st.tabs(["Danh sách bệnh nhân + mô phỏng", "So sánh thuật 
 with main_tabs[0]:
     st.markdown("<div class='section-card'><h3 style='margin-top:0'>Danh sách bệnh nhân</h3></div>", unsafe_allow_html=True)
     edited_df = st.data_editor(
-        display_df,
+        st.session_state["patient_editor_data"],
         num_rows="dynamic",
         use_container_width=True,
         key="patient_editor",
@@ -324,6 +326,7 @@ with main_tabs[0]:
         edited_df["Mức ưu tiên"] = edited_df["Loại bệnh"].map(
             lambda disease: get_priority_by_disease(disease) if pd.notna(disease) else None
         )
+        st.session_state["patient_editor_data"] = edited_df
 
     if edited_df is not None and st.button("Cập nhật dữ liệu bệnh nhân", key="update_patients_btn"):
         updated_patients: List[Patient] = []
