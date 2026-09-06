@@ -307,18 +307,23 @@ else:
     patient_df = pd.DataFrame(columns=DISPLAY_COLUMNS)
 
 display_df = patient_df.rename(columns=COLUMN_NAMES)
-if "patient_editor_data" not in st.session_state or st.session_state["patient_editor_data"].empty and not display_df.empty:
+if "patient_editor_data" not in st.session_state:
     st.session_state["patient_editor_data"] = display_df.copy()
-if not st.session_state["patients"]:
+elif not st.session_state["patients"] and not display_df.empty:
     st.session_state["patient_editor_data"] = display_df.copy()
+
+if st.session_state["patients"] and not st.session_state["patient_editor_data"].equals(display_df):
+    st.session_state["patient_editor_data"] = display_df.copy()
+
 disease_options = [d["disease"] for d in load_diseases()]
 
 main_tabs = st.tabs(["Danh sách bệnh nhân + mô phỏng", "So sánh thuật toán", "Mô phỏng từng bước"])
 
 with main_tabs[0]:
     st.markdown("<div class='section-card'><h3 style='margin-top:0'>Danh sách bệnh nhân</h3></div>", unsafe_allow_html=True)
+    editor_df = st.session_state.get("patient_editor_data", display_df.copy())
     edited_df = st.data_editor(
-        st.session_state["patient_editor_data"],
+        editor_df,
         num_rows="dynamic",
         use_container_width=True,
         key="patient_editor",
