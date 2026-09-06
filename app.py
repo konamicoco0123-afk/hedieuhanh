@@ -7,15 +7,22 @@ from disease import load_diseases, get_priority_by_disease
 
 def update_priority():
     df = st.session_state.get("patient_editor")
+    if df is None:
+        return
 
     if isinstance(df, dict):
+        if "data" in df and isinstance(df["data"], pd.DataFrame):
+            df = df["data"]
+        else:
+            return
+
+    if not isinstance(df, pd.DataFrame):
         return
 
     for index in df.index:
-        disease = df.loc[index, "Loại bệnh"]
-
+        disease = df.at[index, "Loại bệnh"]
         if pd.notna(disease):
-            df.loc[index, "Mức ưu tiên"] = get_priority_by_disease(disease)
+            df.at[index, "Mức ưu tiên"] = get_priority_by_disease(disease)
 
     st.session_state["patient_editor"] = df
 
