@@ -203,6 +203,9 @@ with st.sidebar:
         st.session_state["patients"] = generate_random_patients(st.session_state["patient_count"])
         st.session_state["result"] = None
         st.session_state["comparison_result"] = None
+        st.session_state["patient_editor_data"] = pd.DataFrame(
+            [patient_to_row(patient) for patient in st.session_state["patients"]]
+        ).rename(columns=COLUMN_NAMES)
 
     if st.button("Reset tất cả"):
         st.session_state["patients"] = []
@@ -213,6 +216,7 @@ with st.sidebar:
         st.session_state["aging_interval"] = 3
         st.session_state["aging_step"] = 1
         st.session_state.pop("sim_state", None)
+        st.session_state.pop("patient_editor_data", None)
         st.rerun()
 
     if st.button("So sánh tất cả thuật toán"):
@@ -287,6 +291,9 @@ if st.button("Khởi tạo nhập tay"):
 
     st.session_state["result"] = None
     st.session_state["comparison_result"] = None
+    st.session_state["patient_editor_data"] = pd.DataFrame(
+        [patient_to_row(patient) for patient in st.session_state["patients"]]
+    ).rename(columns=COLUMN_NAMES)
 
 DISPLAY_COLUMNS = list(COLUMN_NAMES.keys())
 
@@ -300,7 +307,9 @@ else:
     patient_df = pd.DataFrame(columns=DISPLAY_COLUMNS)
 
 display_df = patient_df.rename(columns=COLUMN_NAMES)
-if "patient_editor_data" not in st.session_state:
+if "patient_editor_data" not in st.session_state or st.session_state["patient_editor_data"].empty and not display_df.empty:
+    st.session_state["patient_editor_data"] = display_df.copy()
+if not st.session_state["patients"]:
     st.session_state["patient_editor_data"] = display_df.copy()
 disease_options = [d["disease"] for d in load_diseases()]
 
