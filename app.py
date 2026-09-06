@@ -309,10 +309,7 @@ else:
 display_df = patient_df.rename(columns=COLUMN_NAMES)
 if "patient_editor_data" not in st.session_state:
     st.session_state["patient_editor_data"] = display_df.copy()
-elif not st.session_state["patients"] and not display_df.empty:
-    st.session_state["patient_editor_data"] = display_df.copy()
-
-if st.session_state["patients"] and not st.session_state["patient_editor_data"].equals(display_df):
+elif not st.session_state["patients"]:
     st.session_state["patient_editor_data"] = display_df.copy()
 
 disease_options = [d["disease"] for d in load_diseases()]
