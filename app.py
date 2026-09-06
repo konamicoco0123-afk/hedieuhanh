@@ -203,9 +203,6 @@ with st.sidebar:
         st.session_state["patients"] = generate_random_patients(st.session_state["patient_count"])
         st.session_state["result"] = None
         st.session_state["comparison_result"] = None
-        st.session_state["patient_editor_data"] = pd.DataFrame(
-            [patient_to_row(patient) for patient in st.session_state["patients"]]
-        ).rename(columns=COLUMN_NAMES)
 
     if st.button("Reset tất cả"):
         st.session_state["patients"] = []
@@ -216,7 +213,6 @@ with st.sidebar:
         st.session_state["aging_interval"] = 3
         st.session_state["aging_step"] = 1
         st.session_state.pop("sim_state", None)
-        st.session_state.pop("patient_editor_data", None)
         st.rerun()
 
     if st.button("So sánh tất cả thuật toán"):
@@ -291,9 +287,6 @@ if st.button("Khởi tạo nhập tay"):
 
     st.session_state["result"] = None
     st.session_state["comparison_result"] = None
-    st.session_state["patient_editor_data"] = pd.DataFrame(
-        [patient_to_row(patient) for patient in st.session_state["patients"]]
-    ).rename(columns=COLUMN_NAMES)
 
 DISPLAY_COLUMNS = list(COLUMN_NAMES.keys())
 
@@ -307,20 +300,14 @@ else:
     patient_df = pd.DataFrame(columns=DISPLAY_COLUMNS)
 
 display_df = patient_df.rename(columns=COLUMN_NAMES)
-if "patient_editor_data" not in st.session_state:
-    st.session_state["patient_editor_data"] = display_df.copy()
-elif not st.session_state["patients"]:
-    st.session_state["patient_editor_data"] = display_df.copy()
-
 disease_options = [d["disease"] for d in load_diseases()]
 
 main_tabs = st.tabs(["Danh sách bệnh nhân + mô phỏng", "So sánh thuật toán", "Mô phỏng từng bước"])
 
 with main_tabs[0]:
     st.markdown("<div class='section-card'><h3 style='margin-top:0'>Danh sách bệnh nhân</h3></div>", unsafe_allow_html=True)
-    editor_df = st.session_state.get("patient_editor_data", display_df.copy())
     edited_df = st.data_editor(
-        editor_df,
+        display_df,
         num_rows="dynamic",
         use_container_width=True,
         key="patient_editor",
@@ -337,7 +324,6 @@ with main_tabs[0]:
         edited_df["Mức ưu tiên"] = edited_df["Loại bệnh"].map(
             lambda disease: get_priority_by_disease(disease) if pd.notna(disease) else None
         )
-        st.session_state["patient_editor_data"] = edited_df
 
     if edited_df is not None and st.button("Cập nhật dữ liệu bệnh nhân", key="update_patients_btn"):
         updated_patients: List[Patient] = []
