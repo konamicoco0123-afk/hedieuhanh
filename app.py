@@ -24,8 +24,6 @@ def update_priority():
         if pd.notna(disease):
             df.at[index, "Mức ưu tiên"] = get_priority_by_disease(disease)
 
-    st.session_state["patient_editor"] = df
-
 COLUMN_NAMES = {
     "id": "Mã BN",
     "disease": "Loại bệnh",
@@ -328,7 +326,6 @@ with main_tabs[0]:
             disease = edited_df.at[index, "Loại bệnh"]
             if pd.notna(disease):
                 edited_df.at[index, "Mức ưu tiên"] = get_priority_by_disease(disease)
-        st.session_state["patient_editor"] = edited_df
 
     if edited_df is not None and st.button("Cập nhật dữ liệu bệnh nhân", key="update_patients_btn"):
         updated_patients: List[Patient] = []
