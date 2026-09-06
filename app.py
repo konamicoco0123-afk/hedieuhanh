@@ -283,7 +283,7 @@ if st.button("Khởi tạo nhập tay"):
                 arrival_time=0,
                 burst_time=1,
                 priority=5,
-                disease=""
+                disease="",
             )
         )
 
@@ -319,6 +319,16 @@ with main_tabs[0]:
             "Mức ưu tiên": st.column_config.NumberColumn("Mức ưu tiên", disabled=True),
         },
     )
+
+    if isinstance(edited_df, dict):
+        edited_df = edited_df.get("data", edited_df)
+
+    if isinstance(edited_df, pd.DataFrame):
+        for index in edited_df.index:
+            disease = edited_df.at[index, "Loại bệnh"]
+            if pd.notna(disease):
+                edited_df.at[index, "Mức ưu tiên"] = get_priority_by_disease(disease)
+        st.session_state["patient_editor"] = edited_df
 
     if edited_df is not None and st.button("Cập nhật dữ liệu bệnh nhân", key="update_patients_btn"):
         updated_patients: List[Patient] = []
